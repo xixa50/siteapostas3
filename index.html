@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registo de Apostas</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .container {
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 800px;
+            width: 100%;
+            margin-bottom: 40px;
+        }
+
+        .form-container {
+            margin-bottom: 20px;
+        }
+
+        .form-container h3 {
+            color: #007BFF;
+            margin-bottom: 10px;
+        }
+
+        label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        input, select, button {
+            padding: 10px;
+            margin: 10px 0;
+            width: 100%;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            color: #333;
+        }
+
+        th {
+            background-color: #007BFF;
+            color: white;
+        }
+
+        .chart-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .edit-btn {
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .edit-btn:hover {
+            background-color: #e67e22;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Registo de Apostas</h1>
+
+    <div class="container">
+        <div class="form-container">
+            <h3>Adicionar Aposta</h3>
+            <form id="betForm">
+                <label for="betValue">Valor Apostado (€):</label>
+                <input type="number" id="betValue" placeholder="Ex: 50" required>
+                
+                <label for="odd">Odd:</label>
+                <input type="number" id="odd" step="0.01" placeholder="Ex: 2.50" required>
+
+                <button type="submit">Adicionar Aposta</button>
+            </form>
+        </div>
+
+        <div class="table-container">
+            <h3>Histórico de Apostas</h3>
+            <table id="betsTable">
+                <thead>
+                    <tr>
+                        <th>Valor Apostado (€)</th>
+                        <th>Odd</th>
+                        <th>Possíveis Ganhos (€)</th>
+                        <th>Resultado</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- As apostas aparecerão aqui -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="container chart-container">
+        <h3>Evolução das Apostas</h3>
+        <canvas id="balanceChart"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const betForm = document.getElementById('betForm');
+        const betsTable = document.querySelector('#betsTable tbody');
+        const balanceChart = document.getElementById('balanceChart').getContext('2d');
+
+        let balanceData = [0];  // Inicialmente o saldo é 0
+        let chartLabels = ['Início'];  // Rótulos do gráfico
+        let bets = [];  // Array para armazenar as apostas
+
+        const myChart = new Chart(balanceChart, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Saldo (€)',
+                    data: balanceData,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Função para adicionar aposta à tabela e calcular os possíveis ganhos
+        betForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const betValue = parseFloat(document.getElementById('betValue').value);
+            const odd = parseFloat(document.getElementById('odd').value);
+            const possibleWin = betValue * odd;
+
+            let bet = {
+                betValue: betValue,
+                odd: odd,
+                possibleWin: possibleWin,
+                result: null  // Inicialmente sem resultado
+            };
+
+            bets.push(bet);
+            addBetToTable(bet, bets.length - 1);
+
+            // Limpar os campos do formulário
+            betForm.reset();
+        });
+
+        // Função para adicionar uma linha de aposta à tabela
+        function addBetToTable(bet, index) {
+            let row = betsTable.insertRow();
+            row.insertCell(0).textContent = bet.betValue.toFixed(2);
+            row.insertCell(1).textContent = bet.odd.toFixed(2);
+            row.insertCell(2).textContent = bet.possibleWin.toFixed(2);
+            row.insertCell(3).textContent = bet.result || 'Pendente';
+
+            // Adicionar botões de editar e apagar
+            let actionsCell = row.insertCell(4);
+
+            let editButton = document.createElement('button');
+            editButton.textContent = 'Editar';
+            editButton.classList.add('edit-btn');
+            editButton.onclick = () => editBet(index);
+            actionsCell.appendChild(editButton);
+
+            let deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Apagar';
+            deleteButton.classList.add('delete-btn');
+            deleteButton.onclick = () => deleteBet(index);
+            actionsCell.appendChild(deleteButton);
+        }
+
+        // Função para editar o resultado de uma aposta
+        function editBet(index) {
+            let result = prompt("Indique o resultado: 'win' para vitória, 'loss' para derrota:");
+            if (result === 'win' || result === 'loss') {
+                bets[index].result = result === 'win' ? 'Vitória' : 'Derrota';
+                updateBalance(index);
+                refreshTable();
+            } else {
+                alert('Resultado inválido. Deve ser "win" ou "loss".');
+            }
+        }
+
+        // Função para apagar uma aposta
+        function deleteBet(index) {
+            bets.splice(index, 1);
+            refreshTable();
+        }
+
+        // Função para atualizar o saldo com base no resultado da aposta
+        function updateBalance(index) {
+            let currentBalance = balanceData[balanceData.length - 1];
+            let bet = bets[index];
+            if (bet.result === 'Vitória') {
+                currentBalance += bet.possibleWin - bet.betValue;
+            } else if (bet.result === 'Derrota') {
+                currentBalance -= bet.betValue;
+            }
+            balanceData.push(currentBalance);
+
+            // Atualizar o gráfico
+            chartLabels.push(`Aposta ${balanceData.length - 1}`);
+            myChart.update();
+        }
+
+        // Função para atualizar a tabela após edição ou remoção
+        function refreshTable() {
+            betsTable.innerHTML = '';
+            bets.forEach((bet, index) => addBetToTable(bet, index));
+        }
+    </script>
+</body>
+</html>
